@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  
+    <script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/dist/plot.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;  /* Set the font for the entire document */
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/onnxjs/dist/onnx.min.js"> </script>
+    <div class="container" style="display: flex; flex-direction: row; justify-content: space-between;">
+        <div>
+            <div id="paint">
+                <canvas id="myCanvas" width="600" height="600"
+                    onmousedown="start_paint(event)"
+                    onmousemove="do_paint(event)"
+                    onmouseup="stop_paint(event)"
+                    style="border:1px solid #a1a1a1;">
+            </canvas>
+            </div>
+        <div style="position:absolute; top:0px; left:625px;">
+            <h4> Cropped image </h4>
+            <img id="partial_image" style="width:80px; height:80px; border:1px solid #a1a1a1;">
+            <h4> Scaled </h4>
+            <canvas id="bin_canvas" width="80" height="80"
+                    style="border:1px solid #a1a1a1;">
+            </canvas>
+            <h4> Recognize symbol </h4>
+            <button type="button" onclick="process_data();">
+            Do recognition
+            </button>
+            <h4> Clean canvas </h4>
+            <button type="button" onclick="clear_canvas();">
+            Clean
+            </button>
+            <h4> Recognition result </h4>
+            <div id="rec_res" style="font-size:40px;"></div>
+        </div>
+        </div>
+        <div id="plot"></div>
+    </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/onnxjs/dist/onnx.min.js"> </script>
+  <script>
+
+
+var canvas = document.getElementById('myCanvas');
+var ctx = canvas.getContext('2d');
+var canvas_2 = document.getElementById("bin_canvas");
+var ctx_2 = canvas_2.getContext("2d");
+var mouse = {x: 0, y: 0, state: 0, min_x: 600, max_x: 0, min_y: 600, max_y: 0};
+var full_image = ctx.getImageData(0, 0, 600, 600);
+var partial_image = document.getElementById('partial_image');
+var binarized = null;
+
+var N_scaled = 28;
+
+ctx.lineJoin = 'round';
+ctx.lineCap = 'round';
+
+
+function start_paint(e)
+{
+ctx.putImageData(full_image, 0, 0);
+mouse.state = 1;
+ctx.beginPath();
+ctx.moveTo(mouse.x, mouse.y);
+}
+
+var line_width = 35;//28;
+
+function do_paint(e)
+{
+mouse.x = e.pageX - 10;
+mouse.y = e.pageY - 10;
+if (!mouse.state)
+  return;
+ctx.lineTo(mouse.x, mouse.y);
+ctx.lineWidth = line_width;
+ctx.strokeStyle = '#000000';
+ctx.stroke();
+full_image = ctx.getImageData(0, 0, 600, 600);
+if (mouse.min_x > mouse.x)
+  mouse.min_x = mouse.x;
+if (mouse.min_y > mouse.y)
+  mouse.min_y = mouse.y;
+if (mouse.max_x < mouse.x)
+  mouse.max_x = mouse.x;
+if (mouse.max_y < mouse.y)
+  mouse.max_y = mouse.y;
+}
+
+function stop_paint(e)
+{
+mouse.state = 0;
+full_image = ctx.getImageData(0, 0, 600, 600);
+
+c_x = (mouse.max_x + mouse.min_x) / 2;
+c_y = (mouse.max_y + mouse.min_y) / 2;
+a = Math.max(mouse.max_x - mouse.min_x, mouse.max_y - mouse.min_y);
+a += line_width;// + 90;
+var part = ctx.getImageData(c_x - a/2, c_y - a/2, a, a);
+partial_image.src = getImageURL(part);
+binarized = Array(N_scaled).fill(0).map(x => Array(N_scaled).fill(0))
+var counts = Array(N_scaled).fill(0).map(x => Array(N_scaled).fill(0))
+
+for (var idx_y = 0; idx_y < part.height; idx_y += 1)
+  for (var idx_x = 0; idx_x < part.width; idx_x += 1)
+  {
+    counts[Math.floor(N_scaled * idx_x / part.width)][Math.floor(N_scaled * idx_y / part.height)] += 1;
+    if (part.data[idx_y * part.width * 4 + idx_x * 4 + 3] > 1)
+        binarized[Math.floor(N_scaled * idx_x / part.width)][Math.floor(N_scaled * idx_y / part.height)] += 1;
+  }
+
+for (var i = 0; i < N_scaled; i++)
+  for (var j = 0; j < N_scaled; j++)
+    binarized[i][j] = binarized[i][j] / counts[i][j];
+
+ctx_2.fillStyle = "rgba(255, 255, 255, 255)";
+ctx_2.fillRect(0, 0, canvas_2.width, canvas_2.height);
+for (var i = 0; i < N_scaled; i++)
+  for (var j = 0; j < N_scaled; j++)
+  {
+    var c = Math.floor(255 - 255*binarized[i][j]);
+    var x = Math.floor(canvas_2.width / N_scaled * i);
+    var y = Math.floor(canvas_2.height / N_scaled * j);
+    var dx = Math.floor(canvas_2.width / N_scaled + 1);
+    var dy = Math.floor(canvas_2.height / N_scaled + 1);
+    ctx_2.fillStyle = "rgba(" + [c, c, c, 255].join(",") + ")";
+    ctx_2.fillRect(x, y, dx, dy);
+  }
+
+ctx.lineWidth = 2;
+ctx.strokeStyle = '#00e025';
+ctx.strokeRect(c_x - a/2, c_y - a/2, a, a);
+}
+
+function getImageURL(imgData)
+{
+ var canvas = document.createElement('canvas');
+ var ctx = canvas.getContext('2d');
+ canvas.width = imgData.width;
+ canvas.height = imgData.height;
+ ctx.putImageData(imgData, 0, 0);
+ return canvas.toDataURL(); //image URL
+}
+
+function argMax(array) {
+    const maxValue = Math.max(...array); // Get the maximum value
+    return array.indexOf(maxValue);     // Return the index of the maximum value
+}
+
+function softmax(arr) {
+    // Step 1: Calculate exponentials of all elements
+    const expArr = arr.map(x => Math.exp(x));
+    
+    // Step 2: Calculate the sum of exponentials
+    const sumExp = expArr.reduce((sum, val) => sum + val, 0);
+    
+    // Step 3: Divide each exponential by the sum of exponentials to get probabilities
+    const softmaxArr = expArr.map(x => x / sumExp);
+    
+    return softmaxArr;
+}
+
+async function process_data()
+{
+    const sess = new onnx.InferenceSession()
+    await sess.loadModel('./model_mnist.onnx')
+    
+    const imgData = ctx_2.getImageData(0, 0, 28, 28);
+    //arr = new Float32Array(28*28);
+    const input = new onnx.Tensor( [].concat.apply([], binarized), "float32", [1,1,28,28]);
+
+    const outputMap = await sess.run([input])
+    const outputTensor = outputMap.values().next().value
+    console.log(outputTensor.data)
+    const jsArray = Array.from(outputTensor.data);
+    document.getElementById('rec_res').innerHTML = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt"[argMax(jsArray)];
+    
+    softmax_arr = softmax(jsArray)
+   
+    const str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt";
+    const data = [];
+    for (let i = 0; i < str.length; i++) {
+        data.push({ category: str[i], value: softmax_arr[i] });
+    }
+    // Create a simple bar chart
+    const chart = Plot.plot({
+      marks: [
+        // Bar chart using Plot.barX
+        Plot.barX(data, { x: "value", y: "category", fill: "steelblue" })
+      ],
+        width: 800,  // 90% of window width
+        height: 650
+    });
+
+    // Append the chart to the DOM
+    const plotContainer = document.getElementById("plot");
+    plotContainer.innerHTML = "";
+    plotContainer.appendChild(chart);
+}
+
+function clear_canvas()
+{
+mouse = {x: 0, y: 0, state: 0, min_x: 600, max_x: 0, min_y: 600, max_y: 0};
+binarized = null;
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+full_image = ctx.getImageData(0, 0, 600, 600);
+ctx_2.clearRect(0, 0, 80, 80);
+var part = ctx.getImageData(0, 0, 80, 80);
+partial_image.src = getImageURL(part);
+document.getElementById('rec_res').innerHTML = "";
+
+}
+
+  </script>
+</body>
+
+
+</html>
