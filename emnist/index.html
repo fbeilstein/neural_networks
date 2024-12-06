@@ -17,11 +17,11 @@
     <div class="container" style="display: flex; flex-direction: column; justify-content: space-between;">
         <div>
             <div id="paint">
-                <canvas id="myCanvas" width="600" height="600"
+                <canvas id="myCanvas" width="450" height="450"
                     style="border:1px solid #a1a1a1;">
             </canvas>
             </div>
-            <div style="position:absolute; top:0px; left:625px;">
+            <div style="position:absolute; top:0px; left:475px;">
                 <h4> Cropped </h4>
                 <img id="partial_image" style="width:80px; height:80px; border:1px solid #a1a1a1;">
                 <h4> Scaled </h4>
@@ -54,8 +54,8 @@ var canvas = document.getElementById('myCanvas');
 var ctx = canvas.getContext('2d');
 var canvas_2 = document.getElementById("bin_canvas");
 var ctx_2 = canvas_2.getContext("2d");
-var mouse = {x: 0, y: 0, state: 0, min_x: 600, max_x: 0, min_y: 600, max_y: 0};
-var full_image = ctx.getImageData(0, 0, 600, 600);
+var mouse = {x: 0, y: 0, state: 0, min_x: 450, max_x: 0, min_y: 450, max_y: 0};
+var full_image = ctx.getImageData(0, 0, 450, 450);
 var partial_image = document.getElementById('partial_image');
 var binarized = null;
 var N_scaled = 28;
@@ -103,7 +103,7 @@ ctx.lineTo(position.x, position.y);
 ctx.lineWidth = line_width;
 ctx.strokeStyle = '#000000';
 ctx.stroke();
-full_image = ctx.getImageData(0, 0, 600, 600);
+full_image = ctx.getImageData(0, 0, 450, 450);
 if (mouse.min_x > mouse.x)
   mouse.min_x = mouse.x;
 if (mouse.min_y > mouse.y)
@@ -120,7 +120,7 @@ function stop_paint(e)
   if (!mouse.state)
     return;
 mouse.state = 0;
-full_image = ctx.getImageData(0, 0, 600, 600);
+full_image = ctx.getImageData(0, 0, 450, 450);
 
 c_x = (mouse.max_x + mouse.min_x) / 2;
 c_y = (mouse.max_y + mouse.min_y) / 2;
@@ -211,10 +211,10 @@ async function process_data()
 
     const chart = Plot.plot({
       marks: [
-        Plot.barX(data, { x: "value", y: "category", fill: "steelblue" })
+        Plot.barY(data, { x: "category", y: "value", fill: "steelblue" })
       ],
-        width: 800,  
-        height: 650
+        width: 600,  
+        height: 200
     });
 
     const plotContainer = document.getElementById("plot");
@@ -223,14 +223,16 @@ async function process_data()
 }
 
 function clear_canvas() {
-mouse = {x: 0, y: 0, state: 0, min_x: 600, max_x: 0, min_y: 600, max_y: 0};
+mouse = {x: 0, y: 0, state: 0, min_x: 450, max_x: 0, min_y: 450, max_y: 0};
 binarized = null;
 ctx.clearRect(0, 0, canvas.width, canvas.height);
-full_image = ctx.getImageData(0, 0, 600, 600);
+full_image = ctx.getImageData(0, 0, 450, 450);
 ctx_2.clearRect(0, 0, 80, 80);
 var part = ctx.getImageData(0, 0, 80, 80);
 partial_image.src = getImageURL(part);
 document.getElementById('rec_res').innerHTML = "";
+const plotContainer = document.getElementById("plot");
+    plotContainer.innerHTML = "";
 }
 
 function init() {
