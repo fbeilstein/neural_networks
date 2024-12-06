@@ -63,9 +63,24 @@ var N_scaled = 28;
 ctx.lineJoin = 'round';
 ctx.lineCap = 'round';
 
+function getPointerPosition(event) {
+            if (event.touches) {
+                const touch = event.touches[0];
+                return {
+                    x: touch.clientX - canvas.getBoundingClientRect().left,
+                    y: touch.clientY - canvas.getBoundingClientRect().top,
+                };
+            } else {
+                return {
+                    x: event.clientX - canvas.getBoundingClientRect().left,
+                    y: event.clientY - canvas.getBoundingClientRect().top,
+                };
+            }
+        }
 
 function start_paint(e)
 {
+const position = getPointerPosition(event);
 ctx.putImageData(full_image, 0, 0);
 mouse.state = 1;
 ctx.beginPath();
@@ -77,11 +92,12 @@ var line_width = 35;//28;
 
 function do_paint(e)
 {
-mouse.x = e.pageX - 10;
-mouse.y = e.pageY - 10;
+const position = getPointerPosition(event);
+mouse.x = position.x;
+mouse.y = position.y;
 if (!mouse.state)
   return;
-ctx.lineTo(mouse.x, mouse.y);
+ctx.lineTo(position.x, position.y);
 ctx.lineWidth = line_width;
 ctx.strokeStyle = '#000000';
 ctx.stroke();
@@ -99,6 +115,8 @@ if (mouse.max_y < mouse.y)
 
 function stop_paint(e)
 {
+  if (!mouse.state)
+  return;
 mouse.state = 0;
 full_image = ctx.getImageData(0, 0, 600, 600);
 
@@ -225,7 +243,7 @@ canvas.addEventListener("mousedown", start_paint);
         canvas.addEventListener("touchstart", start_paint);
         canvas.addEventListener("touchmove", do_paint);
         canvas.addEventListener("touchend", stop_paint);
-        
+        canvas.addEventListener("touchcancel", stop_paint);
 }
 init()
   </script>
