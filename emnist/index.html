@@ -21,27 +21,33 @@
                     onmousedown="start_paint(event)"
                     onmousemove="do_paint(event)"
                     onmouseup="stop_paint(event)"
+                    touchstart="start_paint(event)"
+                    touchmove="do_paint(event)"
+                    touchend="stop_paint(event)"
                     style="border:1px solid #a1a1a1;">
             </canvas>
             </div>
-        <div style="position:absolute; top:0px; left:625px;">
-            <h4> Cropped image </h4>
-            <img id="partial_image" style="width:80px; height:80px; border:1px solid #a1a1a1;">
-            <h4> Scaled </h4>
-            <canvas id="bin_canvas" width="80" height="80"
-                    style="border:1px solid #a1a1a1;">
-            </canvas>
-            <h4> Recognize symbol </h4>
-            <button type="button" onclick="process_data();">
-            Do recognition
-            </button>
-            <h4> Clean canvas </h4>
-            <button type="button" onclick="clear_canvas();">
-            Clean
-            </button>
-            <h4> Recognition result </h4>
-            <div id="rec_res" style="font-size:40px;"></div>
-        </div>
+            <div style="position:absolute; top:0px; left:625px;">
+                <h4> Cropped </h4>
+                <img id="partial_image" style="width:80px; height:80px; border:1px solid #a1a1a1;">
+                <h4> Scaled </h4>
+                
+                <canvas id="bin_canvas" width="80" height="80"
+                        style="border:1px solid #a1a1a1;">
+                </canvas>
+                
+                <h4> </h4>
+                <button type="button" onclick="process_data();">
+                Recognize symbol
+                </button>
+                <h4> </h4>
+                <button type="button" onclick="clear_canvas();">
+                Clean canvas
+                </button>
+                
+                <h4> Result </h4>
+                <div id="rec_res" style="font-size:30px;"></div>
+            </div>
         </div>
         <div id="plot"></div>
     </div>
@@ -58,12 +64,10 @@ var mouse = {x: 0, y: 0, state: 0, min_x: 600, max_x: 0, min_y: 600, max_y: 0};
 var full_image = ctx.getImageData(0, 0, 600, 600);
 var partial_image = document.getElementById('partial_image');
 var binarized = null;
-
 var N_scaled = 28;
 
 ctx.lineJoin = 'round';
 ctx.lineCap = 'round';
-
 
 function start_paint(e)
 {
@@ -152,30 +156,25 @@ function getImageURL(imgData)
 }
 
 function argMax(array) {
-    const maxValue = Math.max(...array); // Get the maximum value
-    return array.indexOf(maxValue);     // Return the index of the maximum value
+    const maxValue = Math.max(...array); 
+    return array.indexOf(maxValue);     
 }
 
 function softmax(arr) {
-    // Step 1: Calculate exponentials of all elements
     const expArr = arr.map(x => Math.exp(x));
-    
-    // Step 2: Calculate the sum of exponentials
     const sumExp = expArr.reduce((sum, val) => sum + val, 0);
-    
-    // Step 3: Divide each exponential by the sum of exponentials to get probabilities
-    const softmaxArr = expArr.map(x => x / sumExp);
-    
+    const softmaxArr = expArr.map(x => x / sumExp);   
     return softmaxArr;
 }
 
+sess = undefined
 async function process_data()
 {
-    const sess = new onnx.InferenceSession()
-    await sess.loadModel('./model_mnist.onnx')
-    
+    if(sess==undefined) {
+      sess = new onnx.InferenceSession()
+      await sess.loadModel('./model_mnist.onnx')
+    }
     const imgData = ctx_2.getImageData(0, 0, 28, 28);
-    //arr = new Float32Array(28*28);
     const input = new onnx.Tensor( [].concat.apply([], binarized), "float32", [1,1,28,28]);
 
     const outputMap = await sess.run([input])
@@ -191,17 +190,15 @@ async function process_data()
     for (let i = 0; i < str.length; i++) {
         data.push({ category: str[i], value: softmax_arr[i] });
     }
-    // Create a simple bar chart
+
     const chart = Plot.plot({
       marks: [
-        // Bar chart using Plot.barX
         Plot.barX(data, { x: "value", y: "category", fill: "steelblue" })
       ],
-        width: 800,  // 90% of window width
+        width: 800,  
         height: 650
     });
 
-    // Append the chart to the DOM
     const plotContainer = document.getElementById("plot");
     plotContainer.innerHTML = "";
     plotContainer.appendChild(chart);
