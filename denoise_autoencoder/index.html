@@ -97,6 +97,8 @@ ctx.lineJoin = 'round';
 ctx.lineCap = 'round';
 
 noise = 0.1
+binarized = Array(N_scaled).fill(0).map(x => Array(N_scaled).fill(0))
+binarized_noise = Array(N_scaled).fill(0).map(x => Array(N_scaled).fill(0))
 function updateValue(value) {
     document.getElementById('noise_lvl').innerHTML = noise;
     noise = value;
