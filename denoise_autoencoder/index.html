@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=0.3, minimum-scale=0.3, maximum-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+    <script src="./d3.js"></script>
+  
+    <script src="./observable.js"></script>
     <style>
         body {
             font-family: 'Arial', sans-serif;  /* Set the font for the entire document */
@@ -11,79 +13,48 @@
     </style>
 </head>
 <body>
-  
-    <div class="container" style="gap:150px;">
+    <script src="https://cdn.jsdelivr.net/npm/onnxjs/dist/onnx.min.js"> </script>
+    <div class="container" style="display: flex; flex-direction: column; justify-content: space-between;">
         <div>
+            <div> 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt </div>
             <div id="paint">
                 <canvas id="myCanvas" width="450" height="450"
                     style="border:1px solid #a1a1a1;">
-                </canvas>
+            </canvas>
             </div>
             <div style="position:absolute; top:0px; left:475px;">
+                <h4> Cropped </h4>
+                <img id="partial_image" style="width:80px; height:80px; border:1px solid #a1a1a1;">
+                <h4> Scaled </h4>
                 
-              <h4 id="noise_lvl">0.10</h4>
-              <input type="range" id="slider" min="0" max="1" step="0.01" value="0.1" oninput="updateValue(value)"></input>
-
-              <h4> Cropped </h4>
-              <img id="partial_image" style="width:80px; height:80px; border:1px solid #a1a1a1;">
-              <h4> Scaled </h4>
-              
-              <canvas id="bin_canvas" width="80" height="80"
-                      style="border:1px solid #a1a1a1;">
-              </canvas>
-              
-              <h4> </h4>
-              <button type="button" onclick="process_data();">
-              Denoise
-              </button>
-              <h4> </h4>
-              <button type="button" onclick="clear_canvas();">
-              Clean canvas
-              </button>
-          </div>
-         </div> 
-         
-        <div id="paint1">
-              <canvas id="myCanvas_decoded" width="400" height="400"
-              style="border:1px solid #a1a1a1;">
-              </canvas>
-        </div>  
-        <div id="paint2">
-              <canvas id="myCanvas_noise" width="400" height="400"
-              style="border:1px solid #a1a1a1;">
-              </canvas>
+                <canvas id="bin_canvas" width="80" height="80"
+                        style="border:1px solid #a1a1a1;">
+                </canvas>
+                
+                <h4> </h4>
+                <button type="button" onclick="process_data();">
+                Recognize symbol
+                </button>
+                <h4> </h4>
+                <button type="button" onclick="clear_canvas();">
+                Clean canvas
+                </button>
+                
+                <h4> Result </h4>
+                <div id="rec_res" style="font-size:30px;"></div>
+            </div>
         </div>
+        <div id="plot"></div>
     </div>
-    <style>
-      /* Default layout for desktop */
-      .container {
-          display: flex;
-          flex-direction: row;
-          gap: 150px;
-      }
-  
-      /* Layout for mobile devices (screen width <= 768px) */
-      @media (max-width: 768px) {
-          .container {
-              flex-direction: column;
-              gap: 150px;
-          }
-      }
-  </style>
 
+  <script src="https://cdn.jsdelivr.net/npm/onnxjs/dist/onnx.min.js"> </script>
   <script>
 
 
 var canvas = document.getElementById('myCanvas');
 var ctx = canvas.getContext('2d');
-
 var canvas_2 = document.getElementById("bin_canvas");
 var ctx_2 = canvas_2.getContext("2d");
-var canvas_decoded = document.getElementById('myCanvas_decoded');
-var canvas_noise = document.getElementById('myCanvas_noise');
-var ctx_decoded = canvas_decoded.getContext('2d');
-var ctx_noise = canvas_noise.getContext('2d');
-
 var mouse = {x: 0, y: 0, state: 0, min_x: 450, max_x: 0, min_y: 450, max_y: 0};
 var full_image = ctx.getImageData(0, 0, 450, 450);
 var partial_image = document.getElementById('partial_image');
@@ -92,26 +63,6 @@ var N_scaled = 28;
 
 ctx.lineJoin = 'round';
 ctx.lineCap = 'round';
-
-noise = 0.1
-function updateValue(value) {
-    document.getElementById('noise_lvl').innerHTML = noise;
-    noise = value;
-    addNoiseToImage(binarized, binarized_noise, noise)
-    for (let i = 0; i < 28; i++) {
-      for (let j = 0; j < 28; j++) {
-        const c = 255-Math.floor(255*binarized_noise[i][j]);
-        ctx_noise.fillStyle = `rgba(${c},${c},${c},255)`;
-          ctx_noise.fillRect(
-          (canvas_noise.width / 28) * i,
-          (canvas_noise.height / 28) * j,
-          canvas_noise.width / 28,
-          canvas_noise.height / 28
-        );
-      }
-    }
-
-}
 
 function getPointerPosition(event) {
       if (event.touches) {
@@ -175,11 +126,10 @@ full_image = ctx.getImageData(0, 0, 450, 450);
 c_x = (mouse.max_x + mouse.min_x) / 2;
 c_y = (mouse.max_y + mouse.min_y) / 2;
 a = Math.max(mouse.max_x - mouse.min_x, mouse.max_y - mouse.min_y);
-a += line_width + 80;
+a += line_width;// + 90;
 var part = ctx.getImageData(c_x - a/2, c_y - a/2, a, a);
 partial_image.src = getImageURL(part);
 binarized = Array(N_scaled).fill(0).map(x => Array(N_scaled).fill(0))
-binarized_noise = Array(N_scaled).fill(0).map(x => Array(N_scaled).fill(0))
 var counts = Array(N_scaled).fill(0).map(x => Array(N_scaled).fill(0))
 
 for (var idx_y = 0; idx_y < part.height; idx_y += 1)
@@ -236,73 +186,41 @@ function softmax(arr) {
     return softmaxArr;
 }
 
-function addNoiseToImage(from, to, std) {
-    for (let i = 0; i < to.length; i++) {
-        for (let j = 0; j < to[i].length; j++) {
-            let noise = generateGaussianNoise(std);           
-            to[i][j] = from[i][j] + noise;
-            to[i][j] = Math.max(0, Math.min(1.0, to[i][j]));
-        }
-    }
-    console.log(to)
-    console.log(from)
-    return to;
-}
-
-
-function generateGaussianNoise(std) {
-    let u1 = Math.random();
-    let u2 = Math.random();
-    
-    let z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);   
-    return z0 * std;
-}
-
-
 sess = undefined
 async function process_data()
 {
     if(sess==undefined) {
-      sess = await ort.InferenceSession.create('./model_encoder_decoder.onnx');
+      sess = new onnx.InferenceSession()
+      await sess.loadModel('./model_mnist.onnx')
     }
     const imgData = ctx_2.getImageData(0, 0, 28, 28);
-    
-    //const input = new ort.Tensor( [].concat.apply([], binarized), "float32", [1,1,28,28]);
-    addNoiseToImage(binarized, binarized_noise, noise)
-    flattened = [].concat.apply([], binarized_noise)
-    const input0 = new ort.Tensor(new Float32Array(flattened), [1, 1, 28, 28]);
+    const input = new onnx.Tensor( [].concat.apply([], binarized), "float32", [1,1,28,28]);
 
-    const outputMap = await sess.run({ input: input0 });
-    const outputTensor = outputMap["output"]
+    const outputMap = await sess.run([input])
+    const outputTensor = outputMap.values().next().value
+    console.log(outputTensor.data)
+    const jsArray = Array.from(outputTensor.data);
+    document.getElementById('rec_res').innerHTML = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt"[argMax(jsArray)];
     
-    const decoded = Array.from(outputTensor.data);
-    
-    for (let i = 0; i < 28; i++) {
-    for (let j = 0; j < 28; j++) {
-      const c = 255-Math.floor(255*decoded[28*i+j]);
-      ctx_decoded.fillStyle = `rgba(${c},${c},${c},255)`;
-        ctx_decoded.fillRect(
-        (canvas_decoded.width / 28) * i,
-        (canvas_decoded.height / 28) * j,
-        canvas_decoded.width / 28,
-        canvas_decoded.height / 28
-      );
+    softmax_arr = softmax(jsArray)
+   
+    const str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabdefghnqrt";
+    const data = [];
+    for (let i = 0; i < str.length; i++) {
+        data.push({ category: str[i], value: softmax_arr[i] });
     }
-  }
 
-  for (let i = 0; i < 28; i++) {
-    for (let j = 0; j < 28; j++) {
-      const c = 255-Math.floor(255*binarized_noise[i][j]);
-      ctx_noise.fillStyle = `rgba(${c},${c},${c},255)`;
-        ctx_noise.fillRect(
-        (canvas_noise.width / 28) * i,
-        (canvas_noise.height / 28) * j,
-        canvas_noise.width / 28,
-        canvas_noise.height / 28
-      );
-    }
-  }
+    const chart = Plot.plot({
+      marks: [
+        Plot.barY(data, { x: "category", y: "value", fill: "steelblue" })
+      ],
+        width: 600,  
+        height: 200
+    });
 
+    const plotContainer = document.getElementById("plot");
+    plotContainer.innerHTML = "";
+    plotContainer.appendChild(chart);
 }
 
 function clear_canvas() {
