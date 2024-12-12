@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=0.3, minimum-scale=0.3, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=0.5, minimum-scale=0.3, maximum-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
     <style>
         body {
@@ -12,7 +12,7 @@
 </head>
 <body>
   
-    <div class="container" style="gap:150px;">
+    <div class="container">
         <div>
             <div id="paint">
                 <canvas id="myCanvas" width="450" height="450"
@@ -42,17 +42,19 @@
               </button>
           </div>
          </div> 
-         
-        <div id="paint1">
-              <canvas id="myCanvas_decoded" width="400" height="400"
-              style="border:1px solid #a1a1a1;">
-              </canvas>
-        </div>  
-        <div id="paint2">
-              <canvas id="myCanvas_noise" width="400" height="400"
-              style="border:1px solid #a1a1a1;">
-              </canvas>
-        </div>
+        
+        <div style="display: flex; flex-direction: row;">
+          <div id="paint1">
+                <canvas id="myCanvas_decoded" width="400" height="400"
+                style="border:1px solid #a1a1a1;">
+                </canvas>
+          </div>  
+          <div id="paint2">
+                <canvas id="myCanvas_noise" width="400" height="400"
+                style="border:1px solid #a1a1a1;">
+                </canvas>
+          </div>
+      </div>
     </div>
     <style>
       /* Default layout for desktop */
@@ -63,10 +65,11 @@
       }
   
       /* Layout for mobile devices (screen width <= 768px) */
-      @media (max-width: 1000px) {
+      @media (any-pointer: coarse) {
           .container {
+              display: flex;
               flex-direction: column;
-              gap: 50px;
+              gap: 10px;
           }
       }
   </style>
