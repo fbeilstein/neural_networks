@@ -34,15 +34,12 @@
               
               <h4> </h4>
               <button type="button" onclick="process_data();">
-              Recognize symbol
+              Denoise
               </button>
               <h4> </h4>
               <button type="button" onclick="clear_canvas();">
               Clean canvas
               </button>
-              
-              <h4> Result </h4>
-              <div id="rec_res" style="font-size:30px;"></div>
           </div>
          </div> 
          
@@ -57,7 +54,23 @@
               </canvas>
         </div>
     </div>
-
+    <style>
+      /* Default layout for desktop */
+      .container {
+          display: flex;
+          flex-direction: row;
+          gap: 150px;
+      }
+  
+      /* Layout for mobile devices (screen width <= 768px) */
+      @media (max-width: 768px) {
+          .container {
+              flex-direction: column;
+              gap: 150px;
+          }
+      }
+  </style>
+  
   <script>
 
 
@@ -84,6 +97,20 @@ noise = 0.1
 function updateValue(value) {
     document.getElementById('noise_lvl').innerHTML = noise;
     noise = value;
+    addNoiseToImage(binarized, binarized_noise, noise)
+    for (let i = 0; i < 28; i++) {
+      for (let j = 0; j < 28; j++) {
+        const c = 255-Math.floor(255*binarized_noise[i][j]);
+        ctx_noise.fillStyle = `rgba(${c},${c},${c},255)`;
+          ctx_noise.fillRect(
+          (canvas_noise.width / 28) * i,
+          (canvas_noise.height / 28) * j,
+          canvas_noise.width / 28,
+          canvas_noise.height / 28
+        );
+      }
+    }
+
 }
 
 function getPointerPosition(event) {
