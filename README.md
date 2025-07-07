@@ -1,5 +1,6 @@
 ### Lectures
 * [Lecture 1, What is NN](https://colab.research.google.com/github/fbeilstein/neural_networks/blob/master/lecture_1_what_is_nn.ipynb)
+* [Lecture 2, Under- and Over- Fit](https://colab.research.google.com/github/fbeilstein/neural_networks/blob/master/lecture_2_under_over_fit.ipynb)
 
 ### NNs
 * [Neural Network](https://fbeilstein.github.io/neural_networks/emnist/index.html)
